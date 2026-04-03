@@ -1,0 +1,17 @@
+# Exclui do contexto de build do FRONTEND
+
+# Backend (tem seu próprio Dockerfile e contexto)
+backend/
+
+# Dependências e build artifacts
+node_modules/
+dist/
+
+# Git e configs locais
+.git/
+.gitignore
+*.local
+
+# Logs
+*.log
+npm-debug.log*

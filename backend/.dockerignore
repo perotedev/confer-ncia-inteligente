@@ -1,0 +1,8 @@
+# Exclui do contexto de build do BACKEND
+node_modules/
+dist/
+.git/
+*.log
+npm-debug.log*
+.env
+.env.*

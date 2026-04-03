@@ -1,0 +1,132 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────
+#  CheckFlow — Stack completo
+#
+#  Serviços:
+#    postgres    → banco de dados
+#    redis       → pub/sub + cache
+#    db-init     → roda migrate + seed (executa uma vez e sai)
+#    backend_1   → instância 1 da API Node.js
+#    backend_2   → instância 2 da API Node.js (escalabilidade)
+#    frontend    → Nginx: serve o React e faz proxy para os backends
+#
+#  Acesso:
+#    http://localhost:3000  →  aplicação completa
+# ─────────────────────────────────────────────────────────────
+
+x-backend-env: &backend-env
+  DATABASE_URL: "postgresql://checkflow:checkflow123@postgres:5432/checkflow?schema=public"
+  REDIS_URL: "redis://redis:6379"
+  JWT_SECRET: "checkflow-jwt-secret-troque-em-producao"
+  JWT_EXPIRES_IN: "1d"
+  CORS_ORIGINS: "http://localhost:3000"
+  NODE_ENV: production
+
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: checkflow_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: checkflow
+      POSTGRES_PASSWORD: checkflow123
+      POSTGRES_DB: checkflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U checkflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Redis ────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: checkflow_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Init: migrate + seed (roda uma vez e sai) ────────────────
+  db-init:
+    build:
+      context: ./backend
+    container_name: checkflow_db_init
+    environment:
+      <<: *backend-env
+    command: >
+      sh -c "
+        npx prisma migrate deploy &&
+        node dist/seed.js
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: "no"
+
+  # ── Backend instância 1 ──────────────────────────────────────
+  backend_1:
+    build:
+      context: ./backend
+    container_name: checkflow_backend_1
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      PORT: 3001
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Backend instância 2 ──────────────────────────────────────
+  backend_2:
+    build:
+      context: ./backend
+    container_name: checkflow_backend_2
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      PORT: 3001
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Frontend (Nginx: React + proxy para backends) ────────────
+  frontend:
+    build:
+      context: .
+    container_name: checkflow_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend_1:
+        condition: service_healthy
+      backend_2:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

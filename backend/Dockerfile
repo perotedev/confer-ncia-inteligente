@@ -26,5 +26,4 @@ COPY prisma ./prisma/
 
 EXPOSE 3001
 
-# Roda migrations e inicia o servidor
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+CMD ["node", "dist/server.js"]
