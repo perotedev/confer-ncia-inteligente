@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ─────────────────────────────────────────────────────
+
+enum Role {
+  OPERATOR
+  SUPERVISOR
+  ADMIN
+}
+
+enum BancadaStatus {
+  ATIVA
+  INATIVA
+  CONFERINDO
+  DIVERGENCIA
+}
+
+enum BancadaActivity {
+  DIGITANDO
+  CONFERINDO
+  OCIOSA
+}
+
+enum MaterialStatus {
+  PENDENTE
+  CONFERIDO
+  DIVERGENTE
+}
+
+enum DivergenceType {
+  SOBRA
+  FALTA
+}
+
+enum ActivityType {
+  CONFERENCIA
+  DIVERGENCIA
+  CONEXAO
+  DESCONEXAO
+  STATUS
+}
+
+// ── Models ────────────────────────────────────────────────────
+
+model User {
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  password  String
+  role      Role      @default(OPERATOR)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  bancadas Bancada[]
+
+  @@map("users")
+}
+
+model Bancada {
+  id              String          @id @default(uuid())
+  name            String
+  operatorId      String?
+  operator        User?           @relation(fields: [operatorId], references: [id])
+  status          BancadaStatus   @default(INATIVA)
+  activity        BancadaActivity @default(OCIOSA)
+  itemsConferidos Int             @default(0)
+  itemsTotal      Int             @default(0)
+  divergencias    Int             @default(0)
+  lastActivity    DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  materials Material[]
+  events    ActivityEvent[]
+
+  @@map("bancadas")
+}
+
+model Material {
+  id             String          @id @default(uuid())
+  code           String
+  name           String
+  expectedQty    Float
+  checkedQty     Float           @default(0)
+  unit           String
+  lot            String
+  expiry         DateTime
+  bancadaId      String
+  bancada        Bancada         @relation(fields: [bancadaId], references: [id], onDelete: Cascade)
+  status         MaterialStatus  @default(PENDENTE)
+  divergenceType DivergenceType?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("materials")
+}
+
+model ActivityEvent {
+  id         String       @id @default(uuid())
+  timestamp  DateTime     @default(now())
+  bancadaId  String
+  bancada    Bancada      @relation(fields: [bancadaId], references: [id], onDelete: Cascade)
+  operator   String
+  type       ActivityType
+  message    String
+  createdAt  DateTime     @default(now())
+
+  @@map("activity_events")
+}
