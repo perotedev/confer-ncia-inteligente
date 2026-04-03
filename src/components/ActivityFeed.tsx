@@ -1,20 +1,35 @@
 import { cn } from "@/lib/utils";
-import { ActivityEvent } from "@/data/mockData";
+import type { ActivityEvent, ActivityType } from "@/types/api";
 import { CheckCircle2, AlertTriangle, Wifi, WifiOff, Info } from "lucide-react";
+import { format } from "date-fns";
 
-const typeConfig = {
-  conferencia: { icon: CheckCircle2, color: "text-status-success", bg: "bg-status-success/10" },
-  divergencia: { icon: AlertTriangle, color: "text-status-danger", bg: "bg-status-danger/10" },
-  conexao: { icon: Wifi, color: "text-status-info", bg: "bg-status-info/10" },
-  desconexao: { icon: WifiOff, color: "text-status-idle", bg: "bg-status-idle/10" },
-  status: { icon: Info, color: "text-status-warning", bg: "bg-status-warning/10" },
+const typeConfig: Record<ActivityType, { icon: typeof CheckCircle2; color: string; bg: string }> = {
+  CONFERENCIA: { icon: CheckCircle2, color: "text-status-success", bg: "bg-status-success/10" },
+  DIVERGENCIA: { icon: AlertTriangle, color: "text-status-danger", bg: "bg-status-danger/10" },
+  CONEXAO: { icon: Wifi, color: "text-status-info", bg: "bg-status-info/10" },
+  DESCONEXAO: { icon: WifiOff, color: "text-status-idle", bg: "bg-status-idle/10" },
+  STATUS: { icon: Info, color: "text-status-warning", bg: "bg-status-warning/10" },
 };
+
+function formatTime(timestamp: string): string {
+  try {
+    return format(new Date(timestamp), "HH:mm:ss");
+  } catch {
+    return timestamp;
+  }
+}
 
 interface ActivityFeedProps {
   events: ActivityEvent[];
 }
 
 export function ActivityFeed({ events }: ActivityFeedProps) {
+  if (events.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground text-center py-6">Nenhuma atividade registrada</p>
+    );
+  }
+
   return (
     <div className="space-y-1">
       {events.map((event) => {
@@ -28,7 +43,7 @@ export function ActivityFeed({ events }: ActivityFeedProps) {
             <div className="min-w-0 flex-1">
               <p className="text-xs leading-relaxed">{event.message}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                {event.bancadaName} • {event.operator} • {event.timestamp}
+                {event.bancada.name} • {event.operator} • {formatTime(event.timestamp)}
               </p>
             </div>
           </div>

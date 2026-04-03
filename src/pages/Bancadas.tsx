@@ -1,13 +1,26 @@
 import { AppLayout } from "@/components/AppLayout";
 import { BancadaCard } from "@/components/BancadaCard";
-import { bancadas } from "@/data/mockData";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useBancadas } from "@/hooks/api/useBancadas";
 import { Monitor, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+function GridSkeleton() {
+  return (
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} className="h-36 rounded-xl" />
+      ))}
+    </div>
+  );
+}
+
 const Bancadas = () => {
-  const ativas = bancadas.filter(b => b.status !== "inativa");
-  const comDivergencia = bancadas.filter(b => b.status === "divergencia");
+  const { data: bancadas, isLoading } = useBancadas();
+
+  const ativas = bancadas?.filter((b) => b.status !== "INATIVA") ?? [];
+  const comDivergencia = bancadas?.filter((b) => b.status === "DIVERGENCIA") ?? [];
 
   return (
     <AppLayout>
@@ -27,25 +40,38 @@ const Bancadas = () => {
 
         <Tabs defaultValue="todas">
           <TabsList>
-            <TabsTrigger value="todas">Todas ({bancadas.length})</TabsTrigger>
+            <TabsTrigger value="todas">Todas ({bancadas?.length ?? 0})</TabsTrigger>
             <TabsTrigger value="ativas">Ativas ({ativas.length})</TabsTrigger>
             <TabsTrigger value="divergencias">Divergências ({comDivergencia.length})</TabsTrigger>
           </TabsList>
-          <TabsContent value="todas" className="mt-4">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {bancadas.map(b => <BancadaCard key={b.id} bancada={b} />)}
+
+          {isLoading ? (
+            <div className="mt-4">
+              <GridSkeleton />
             </div>
-          </TabsContent>
-          <TabsContent value="ativas" className="mt-4">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {ativas.map(b => <BancadaCard key={b.id} bancada={b} />)}
-            </div>
-          </TabsContent>
-          <TabsContent value="divergencias" className="mt-4">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {comDivergencia.map(b => <BancadaCard key={b.id} bancada={b} />)}
-            </div>
-          </TabsContent>
+          ) : (
+            <>
+              <TabsContent value="todas" className="mt-4">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {bancadas?.map((b) => <BancadaCard key={b.id} bancada={b} />)}
+                </div>
+              </TabsContent>
+              <TabsContent value="ativas" className="mt-4">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {ativas.map((b) => <BancadaCard key={b.id} bancada={b} />)}
+                </div>
+              </TabsContent>
+              <TabsContent value="divergencias" className="mt-4">
+                {comDivergencia.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-12">Nenhuma divergência no momento</p>
+                ) : (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {comDivergencia.map((b) => <BancadaCard key={b.id} bancada={b} />)}
+                  </div>
+                )}
+              </TabsContent>
+            </>
+          )}
         </Tabs>
       </div>
     </AppLayout>

@@ -14,7 +14,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("operator");
+  const [role, setRole] = useState<UserRole>("OPERATOR");
   const [showPassword, setShowPassword] = useState(false);
   const { register, isLoading } = useAuth();
   const navigate = useNavigate();
@@ -71,9 +71,9 @@ export default function Register() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="operator">Operador</SelectItem>
-                    <SelectItem value="supervisor">Supervisor</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="OPERATOR">Operador</SelectItem>
+                    <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
+                    <SelectItem value="ADMIN">Administrador</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

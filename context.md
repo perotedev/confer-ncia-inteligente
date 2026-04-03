@@ -46,6 +46,20 @@ O produto é chamado **CheckFlow** internamente (ver branding no sidebar).
 ### Frontend
 ```
 src/
+├── types/
+│   └── api.ts                 # Tipos TypeScript espelhando o schema Prisma (enums uppercase)
+├── lib/
+│   ├── api.ts                 # Instância axios com interceptor JWT + proxy /api
+│   └── utils.ts
+├── contexts/
+│   ├── AuthContext.tsx        # JWT real (login/register/logout via API)
+│   └── SocketContext.tsx      # Socket.IO client: conecta, escuta eventos, invalida queries
+├── hooks/
+│   └── api/
+│       ├── useBancadas.ts     # GET /api/bancadas (TanStack Query)
+│       ├── useMateriais.ts    # GET /api/materiais + mutation conferir
+│       ├── useKpis.ts         # GET /api/kpis
+│       └── useAtividades.ts   # GET /api/relatorios/atividades
 ├── App.tsx                  # Rotas, providers globais
 ├── contexts/
 │   └── AuthContext.tsx       # Autenticação (mock), papéis de usuário
@@ -252,10 +266,11 @@ Rotas protegidas por `ProtectedRoute`; usuário autenticado é redirecionado par
 
 ## Estado Atual
 
-- **Frontend** completo com dados mockados em `src/data/mockData.ts` (pendente integração com backend)
-- **Backend** implementado com REST API + WebSocket + Redis Pub/Sub + PostgreSQL
-- Auth ainda é mock no frontend; backend já possui JWT real
-- Próximo passo: integrar frontend com backend (trocar mock data por chamadas API + Socket.IO)
+- **Frontend e backend integrados** — sem mais dados mockados em tempo de execução
+- `src/data/mockData.ts` existe apenas como referência histórica (não é mais importado)
+- Auth usa JWT real via `POST /api/auth/login`; sessão persiste via `localStorage` (token + user)
+- Socket.IO conectado automaticamente após login com `{ auth: { token } }`
+- Eventos em tempo real atualizam o cache do TanStack Query sem refetch completo
 
 ---
 
@@ -263,7 +278,9 @@ Rotas protegidas por `ProtectedRoute`; usuário autenticado é redirecionado par
 
 ### Frontend
 ```bash
-npm run dev          # Servidor de desenvolvimento (Vite) — http://localhost:5173
+npm install          # Inclui axios e socket.io-client
+npm run dev          # Servidor de desenvolvimento (Vite) — http://localhost:8080
+                     # Vite proxeia /api e /socket.io → http://localhost:3001
 npm run build        # Build de produção
 npm run test         # Testes unitários (Vitest)
 npm run lint         # ESLint

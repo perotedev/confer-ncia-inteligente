@@ -1,6 +1,7 @@
-import { LayoutDashboard, Monitor, ClipboardCheck, FileBarChart, Settings, Package } from "lucide-react";
+import { LayoutDashboard, Monitor, ClipboardCheck, FileBarChart, Settings, Package, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
   SidebarContent,
@@ -27,11 +28,22 @@ const configItems = [
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 
+const roleLabels: Record<string, string> = {
+  ADMIN: "Administrador",
+  SUPERVISOR: "Supervisor",
+  OPERATOR: "Operador",
+};
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
+  const { user, logout } = useAuth();
+
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
+    : "??";
 
   return (
     <Sidebar collapsible="icon">
@@ -88,17 +100,26 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4">
-        {!collapsed && (
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-xs font-semibold text-sidebar-primary">
-              SV
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-medium text-sidebar-foreground">Supervisor</span>
-              <span className="text-xs text-sidebar-foreground/50">admin@checkflow.io</span>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-xs font-semibold text-sidebar-primary shrink-0">
+            {initials}
           </div>
-        )}
+          {!collapsed && (
+            <>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-xs font-medium text-sidebar-foreground truncate">{user?.name ?? "Usuário"}</span>
+                <span className="text-xs text-sidebar-foreground/50">{user?.role ? roleLabels[user.role] : ""}</span>
+              </div>
+              <button
+                onClick={logout}
+                title="Sair"
+                className="p-1 rounded hover:bg-sidebar-accent transition-colors text-sidebar-foreground/50 hover:text-sidebar-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </>
+          )}
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

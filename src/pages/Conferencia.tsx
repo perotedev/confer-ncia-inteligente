@@ -1,28 +1,42 @@
 import { AppLayout } from "@/components/AppLayout";
 import { MaterialsTable } from "@/components/MaterialsTable";
-import { materials, bancadas } from "@/data/mockData";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useBancadas } from "@/hooks/api/useBancadas";
+import { useMateriais } from "@/hooks/api/useMateriais";
+import type { MaterialStatus } from "@/types/api";
 import { ClipboardCheck, Search, Filter, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 const Conferencia = () => {
-  const [statusFilter, setStatusFilter] = useState("todos");
+  const [statusFilter, setStatusFilter] = useState<MaterialStatus | "TODOS">("TODOS");
+  const [bancadaFilter, setBancadaFilter] = useState("TODAS");
   const [search, setSearch] = useState("");
 
-  const filtered = materials.filter(m => {
-    const matchStatus = statusFilter === "todos" || m.status === statusFilter;
-    const matchSearch = search === "" || m.name.toLowerCase().includes(search.toLowerCase()) || m.code.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchSearch;
-  });
+  const { data: bancadas } = useBancadas();
+  const { data: materiais, isLoading } = useMateriais();
 
-  const stats = {
-    total: materials.length,
-    conferidos: materials.filter(m => m.status === "conferido").length,
-    divergentes: materials.filter(m => m.status === "divergente").length,
-    pendentes: materials.filter(m => m.status === "pendente").length,
-  };
+  const filtered = useMemo(() => {
+    if (!materiais) return [];
+    return materiais.filter((m) => {
+      const matchStatus = statusFilter === "TODOS" || m.status === statusFilter;
+      const matchBancada = bancadaFilter === "TODAS" || m.bancadaId === bancadaFilter;
+      const matchSearch =
+        search === "" ||
+        m.name.toLowerCase().includes(search.toLowerCase()) ||
+        m.code.toLowerCase().includes(search.toLowerCase());
+      return matchStatus && matchBancada && matchSearch;
+    });
+  }, [materiais, statusFilter, bancadaFilter, search]);
+
+  const stats = useMemo(() => ({
+    total: materiais?.length ?? 0,
+    conferidos: materiais?.filter((m) => m.status === "CONFERIDO").length ?? 0,
+    divergentes: materiais?.filter((m) => m.status === "DIVERGENTE").length ?? 0,
+    pendentes: materiais?.filter((m) => m.status === "PENDENTE").length ?? 0,
+  }), [materiais]);
 
   return (
     <AppLayout>
@@ -40,7 +54,7 @@ const Conferencia = () => {
           </Button>
         </div>
 
-        {/* Summary chips */}
+        {/* Resumo */}
         <div className="flex flex-wrap gap-3">
           <div className="px-3 py-1.5 rounded-full bg-muted text-xs font-medium">{stats.total} total</div>
           <div className="px-3 py-1.5 rounded-full bg-status-success/10 text-status-success text-xs font-medium">{stats.conferidos} conferidos</div>
@@ -48,38 +62,47 @@ const Conferencia = () => {
           <div className="px-3 py-1.5 rounded-full bg-status-warning/10 text-status-warning text-xs font-medium">{stats.pendentes} pendentes</div>
         </div>
 
-        {/* Filters */}
+        {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar material..." className="pl-9 h-9 text-sm" value={search} onChange={e => setSearch(e.target.value)} />
+            <Input
+              placeholder="Buscar material..."
+              className="pl-9 h-9 text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as MaterialStatus | "TODOS")}>
             <SelectTrigger className="w-[180px] h-9 text-sm">
               <Filter className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="conferido">Conferido</SelectItem>
-              <SelectItem value="divergente">Divergente</SelectItem>
-              <SelectItem value="pendente">Pendente</SelectItem>
+              <SelectItem value="TODOS">Todos</SelectItem>
+              <SelectItem value="CONFERIDO">Conferido</SelectItem>
+              <SelectItem value="DIVERGENTE">Divergente</SelectItem>
+              <SelectItem value="PENDENTE">Pendente</SelectItem>
             </SelectContent>
           </Select>
-          <Select>
+          <Select value={bancadaFilter} onValueChange={setBancadaFilter}>
             <SelectTrigger className="w-[180px] h-9 text-sm">
               <SelectValue placeholder="Bancada" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todas">Todas</SelectItem>
-              {bancadas.map(b => (
+              <SelectItem value="TODAS">Todas</SelectItem>
+              {bancadas?.map((b) => (
                 <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        <MaterialsTable materials={filtered} />
+        {isLoading ? (
+          <Skeleton className="h-64 rounded-lg" />
+        ) : (
+          <MaterialsTable materials={filtered} />
+        )}
       </div>
     </AppLayout>
   );
